@@ -125,15 +125,7 @@ while (my ($web_name, $web) = each %web_data) {
             last TRY if $got_image == 1;
         }
         if (($got_image == 0) and (defined $image->{warn_age_hours})){
-            my $mtime = -M $image->{outfile};
-            unless (defined $mtime) {
-                warn "DEBUG: -M for $image->{outfile} is undefined";
-            }
-            unless (defined $image->{warn_age_hours}) {
-                warn "DEBUG: warn_age_hours for $img_file is undefined";
-            }
-            warn sprintf("DEBUG: mtime=%.3f, warn_age_hours=%s, outfile=%s", ($mtime // 'undef'), ($image->{warn_age_hours} // 'undef'), ($image->{outfile} // 'undef'));
-            if ((($mtime // 0) * 24) > ($image->{warn_age_hours} // 0)){
+            if (((-M $image->{outfile}) * 24) > $image->{warn_age_hours}){
                 warning(
                     $image,
                     "Did not get $img_file and more than $image->{warn_age_hours} hours old");
