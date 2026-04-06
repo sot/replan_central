@@ -6,10 +6,10 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser(description="Run arc_time_machine.pl Perl script")
     parser.add_argument(
-        "--arc-data-dir", dest="arc_data_dir", help="ARC data directory"
+        "--arc-data-dir", dest="arc_data_dir", required=True, help="ARC data directory"
     )
     parser.add_argument(
-        "--time-machine-dir", dest="time_machine_dir", help="Time machine directory"
+        "--time-machine-dir", dest="time_machine_dir", required=True, help="Time machine directory"
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args, unknown = parser.parse_known_args()
@@ -27,4 +27,5 @@ def main():
     ]
     if args.verbose:
         cmd.append("--verbose")
+    cmd.extend(unknown)
     subprocess.run(cmd, check=True)
