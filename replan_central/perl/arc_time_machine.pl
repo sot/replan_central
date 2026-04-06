@@ -71,7 +71,7 @@ foreach my $query_id (@{$opt{query_name}}) {
     # Add and commit all changes, then tag with current date
     run("git add .", loud => $cmd_opt{verbose});
     run("git commit --allow-empty -a -m 'Update time machine files'", loud => $cmd_opt{verbose});
-    my $tag = `date '+%Y-%m-%d'`;
+    my $tag = `date '+%Y-%m-%dT%H%M%S'`;
     chomp $tag;
     run("git tag $tag", loud => $cmd_opt{verbose});
 }
