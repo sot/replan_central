@@ -190,17 +190,6 @@ def get_parser():
         help="Prediction time step (secs, default=300)",
     )
     parser.add_argument(
-        "--max-slope-samples",
-        type=int,
-        help="Max number of samples when filtering by slope (default=None",
-    )
-    parser.add_argument(
-        "--min-flux-samples",
-        default=100,
-        type=int,
-        help="Minimum number of samples when filtering by flux (default=100)",
-    )
-    parser.add_argument(
         "--test",
         action="store_true",
         help=(
