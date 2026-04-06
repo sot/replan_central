@@ -577,23 +577,6 @@ def plot_multi_line(x, y, z, bins, colors, ax):
     ax.add_collection(lc)
 
 
-def get_p3_slope(p3_times, p3_vals):
-    """
-    Compute the slope (log10(p3) per hour) of the last 6 hours of ACE P3 values.
-    """
-    ok = (
-        p3_times[-1] - p3_times
-    ) < 6 * 3600  # Points within 6 hrs of last available data
-    ok = ok & (p3_vals > 0)  # Good P3 values
-    slope = None
-    if np.sum(ok) > 4:
-        x = (p3_times[ok] - p3_times[-1]) / 3600
-        if x[-1] - x[0] > 2:
-            y = np.log10(p3_vals[ok])
-            slope = np.polyfit(x, y, 1)[0]
-
-    return slope
-
 
 def main(args_sys=None):
     """
