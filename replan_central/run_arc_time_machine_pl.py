@@ -9,7 +9,10 @@ def main():
         "--arc-data-dir", dest="arc_data_dir", required=True, help="ARC data directory"
     )
     parser.add_argument(
-        "--time-machine-dir", dest="time_machine_dir", required=True, help="Time machine directory"
+        "--time-machine-dir",
+        dest="time_machine_dir",
+        required=True,
+        help="Time machine directory",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args, unknown = parser.parse_known_args()

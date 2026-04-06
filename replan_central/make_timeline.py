@@ -113,7 +113,6 @@ from cxotime import CxoTime, CxoTimeLike
 from kadi import events, occweb
 from ska_matplotlib import lineid_plot, plot_cxctime
 
-
 warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning)
 
 P3_BAD = -100000
