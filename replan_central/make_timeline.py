@@ -577,7 +577,6 @@ def plot_multi_line(x, y, z, bins, colors, ax):
     ax.add_collection(lc)
 
 
-
 def main(args_sys=None):
     """
     Generate the Replan Central timeline plot.
