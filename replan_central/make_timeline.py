@@ -113,7 +113,6 @@ from cxotime import CxoTime, CxoTimeLike
 from kadi import events, occweb
 from ska_matplotlib import lineid_plot, plot_cxctime
 
-import replan_central.calc_fluence_dist as cfd
 
 warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning)
 
@@ -674,9 +673,6 @@ def main(args_sys=None):
     draw_ace_yellow_red_limits(fluence_times, ax)
     draw_dummy_lines_letg_hetg_legend(fluence_times, fig, ax)
     draw_fluence_and_grating_state_line(states, fluence_times, fluence, ax)
-    draw_fluence_percentiles(
-        args, states, radzones, fluence0, avg_flux, p3_times, p3_vals, fluence_times, ax
-    )
     x0, x1, y0, y1 = set_plot_x_y_axis_limits(start, stop, ax)
     id_xs, id_labels, next_comm = draw_communication_passes(
         now, comms, ax, x0, x1, y0, y1
@@ -879,44 +875,6 @@ def draw_communication_passes(now, comms, ax, x0, x1, y0, y1):
         if next_comm is None and CxoTime(comm["bot_date"]["value"]) > now:
             next_comm = comm
     return id_xs, id_labels, next_comm
-
-
-def draw_fluence_percentiles(
-    args, states, radzones, fluence0, avg_flux, p3_times, p3_vals, fluence_times, ax
-):
-    """Plot 10, 50, 90 percentiles of fluence"""
-    try:
-        if len(p3_times) < 4:
-            raise ValueError("not enough P3 values")
-        p3_slope = get_p3_slope(p3_times, p3_vals)
-        if p3_slope is not None and avg_flux > 0:
-            p3_fits, p3_samps, fluences = cfd.get_fluences(
-                Path(args.data_dir) / "ACE_hourly_avg.npy",
-            )
-            hrs, fl10, fl50, fl90 = cfd.get_fluence_percentiles(
-                avg_flux,
-                p3_slope,
-                p3_fits,
-                p3_samps,
-                fluences,
-                args.min_flux_samples,
-                args.max_slope_samples,
-            )
-            fluence_hours = (fluence_times - fluence_times[0]) / 3600.0
-            for fl_y, linecolor in zip(
-                (fl10, fl50, fl90), ("-g", "-b", "-r"), strict=False
-            ):
-                fl_y = ska_numpy.interpolate(fl_y, hrs, fluence_hours)  # noqa: PLW2901
-                rates = np.diff(fl_y)
-                fl_y_atten = calc_fluence(fluence_times[:-1], fluence0, rates, states)
-                zero_fluence_at_radzone(fluence_times[:-1], fl_y_atten, radzones)
-                ax.plot(
-                    cxc2pd(fluence_times[0]) + fluence_hours[:-1] / 24.0,
-                    fl_y_atten,
-                    linecolor,
-                )
-    except Exception as e:
-        print(("WARNING: p3 fluence not plotted, error : {}".format(e)))
 
 
 def set_plot_x_y_axis_limits(start, stop, ax):
