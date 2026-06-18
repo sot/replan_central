@@ -8,6 +8,7 @@ self-contained viewer that can be copied to any web-accessible directory.
 import argparse
 import difflib
 import html
+import io
 import json
 import posixpath
 import re
@@ -17,6 +18,13 @@ from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Dict, List, Optional, Set, Tuple
 from urllib.parse import urlsplit
+
+try:
+    from astropy.table import Table
+
+    HAS_ASTROPY = True
+except Exception:
+    HAS_ASTROPY = False
 
 DEFAULT_TEST_SRC = Path("/export/jeanconn/miniforge3/envs/arc-pip-test/www/ASPECT/arc3")
 DEFAULT_FLIGHT_SRC = Path("/proj/sot/ska/www/ASPECT/arc3")
@@ -296,9 +304,44 @@ def html_rendered_text_lines(path: Path) -> Optional[List[str]]:
     except UnicodeDecodeError:
         return None
 
+    table_lines: List[str] = []
+    if HAS_ASTROPY:
+        table_blocks = re.findall(r"(?is)<table\b.*?</table>", content)
+        for i, table_html in enumerate(table_blocks, start=1):
+            try:
+                table = Table.read(io.StringIO(table_html), format="ascii.html")
+            except Exception:
+                continue
+
+            delta_cols = [
+                name for name in table.colnames if "".join(name.lower().split()) == "deltatime"
+            ]
+            for name in delta_cols:
+                table.remove_column(name)
+
+            table_lines.append(f"[table {i}]")
+            table_lines.append(" | ".join(table.colnames))
+            for row in table:
+                values = [str(row[name]).strip() for name in table.colnames]
+                table_lines.append(" | ".join(values))
+
+    # Parse non-table content as rendered text and compare that as well.
+    non_table_content = re.sub(r"(?is)<table\b.*?</table>", "", content)
     parser = RenderedTextExtractor()
-    parser.feed(content)
-    return parser.lines
+    parser.feed(non_table_content)
+
+    filtered: List[str] = []
+    for line in parser.lines:
+        norm = " ".join(line.split())
+        if norm.lower() == "delta time":
+            continue
+        # Delta time cells are standalone values like "-11:48", "1d 00:48", "0:00".
+        if re.match(r"^[+-]?\s*(?:\d+d\s+)?\d{1,2}:\d{2}$", norm):
+            continue
+        filtered.append(line)
+
+    filtered.extend(table_lines)
+    return filtered
 
 
 def render_path_list(paths: List[Path], base: str) -> str:
