@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 ACIS_FLUENCE_DEFAULT = "/proj/web-cxc/htdocs/acis/Fluence/current.dat"
+ACE_AVG_DEFAULT = "/data/mta4/www/RADIATION/ACE/ace.html"
 
 
 def main():
@@ -27,20 +28,34 @@ def main():
             f"(default: {ACIS_FLUENCE_DEFAULT})"
         ),
     )
+    parser.add_argument(
+        "--ace-avg-file",
+        dest="ace_avg_file",
+        default=ACE_AVG_DEFAULT,
+        help=(
+            "Path to the live ACE 2-hr average rates file to snapshot into the "
+            f"time machine (default: {ACE_AVG_DEFAULT})"
+        ),
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args, unknown = parser.parse_known_args()
 
+    time_machine_dir = Path(args.time_machine_dir)
+    time_machine_dir.mkdir(parents=True, exist_ok=True)
+
     # Copy the live current.dat into the time machine directory before running
     # the Perl script so the git add/commit picks it up as a historical snapshot.
-    src = Path(args.acis_fluence_file)
-    if src.exists():
-        time_machine_dir = Path(args.time_machine_dir)
-        time_machine_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, time_machine_dir / "current.dat")
-        if args.verbose:
-            print(f"Copied {src} -> {time_machine_dir / 'current.dat'}")
-    else:
-        print(f"WARNING: --acis-fluence-file {src} not found, skipping snapshot")
+    for src_path, dest_name in [
+        (args.acis_fluence_file, "current.dat"),
+        (args.ace_avg_file, "ace.html"),
+    ]:
+        src = Path(src_path)
+        if src.exists():
+            shutil.copy2(src, time_machine_dir / dest_name)
+            if args.verbose:
+                print(f"Copied {src} -> {time_machine_dir / dest_name}")
+        else:
+            print(f"WARNING: {src} not found, skipping snapshot of {dest_name}")
 
     perl_script = (
         importlib.resources.files("replan_central.perl") / "arc_time_machine.pl"
