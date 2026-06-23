@@ -38,6 +38,13 @@ our %web_content_cfg = ParseConfig(-ConfigFile => File::Spec->catfile($data_dir,
 
 our %web_data = %{ clone(\%web_content_cfg) };
 
+# Load previous web content so stale data can be preserved on fetch failure
+my $web_content_file = File::Spec->catfile($output_dir, $opt{file}{web_content});
+my %prev_web_data;
+if (-e $web_content_file) {
+    %prev_web_data = ParseConfig(-ConfigFile => $web_content_file);
+}
+
 while (my ($web_name, $web) = each %web_data) {
     my $url = $web->{url};
     if (exists $web->{add_tstart_tstop}) { # Ugh, custom code for chandra image
@@ -59,6 +66,14 @@ while (my ($web_name, $web) = each %web_data) {
 
     if ($error) {
 	warning($web, "$error for web data $web_name ($url)");
+	if (exists $prev_web_data{$web_name}) {
+	    my $age_hours = (-M $web_content_file) * 24;
+	    warning($web, sprintf("Using previous data for $web_name (%.1f hours old)", $age_hours));
+	    while (my ($content_name, $prev_content) = each %{$prev_web_data{$web_name}{content}}) {
+		$web->{content}{$content_name}{content} = $prev_content->{content}
+		    if exists $prev_content->{content};
+	    }
+	}
 	next;
     }
 
@@ -135,7 +150,7 @@ while (my ($web_name, $web) = each %web_data) {
 }
 
 # Save the data.
-Config::General->new(\%web_data)->save_file(File::Spec->catfile($output_dir, $opt{file}{web_content}));
+Config::General->new(\%web_data)->save_file($web_content_file);
 
 print STDERR join("\n", @warn), "\n" if @warn;
 
