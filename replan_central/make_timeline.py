@@ -215,6 +215,22 @@ def get_parser():
         type=str,
         help="Override the current time for testing (default=now)",
     )
+    parser.add_argument(
+        "--acis-fluence-file",
+        type=str,
+        help=(
+            "Override ACIS current.dat path (default is the configured flight/test "
+            "location)"
+        ),
+    )
+    parser.add_argument(
+        "--ace-avg-file",
+        type=str,
+        help=(
+            "Override ACE 2-hr average rates file path (default is the configured "
+            "flight/test location). Useful for historical replay."
+        ),
+    )
     return parser
 
 
@@ -608,11 +624,25 @@ def main(args_sys=None):
     comms = get_comms()
 
     # Get the ACIS ops fluence estimate and current 2hr avg flux
-    fluence_date, fluence0 = get_fluence(
-        acis_fluence_file(args.data_dir, test=args.test)
+    acis_fluence_path = (
+        Path(args.acis_fluence_file)
+        if args.acis_fluence_file
+        else acis_fluence_file(args.data_dir, test=args.test)
     )
+    fluence_date, fluence0 = get_fluence(acis_fluence_path)
+    if fluence_date > now:
+        print(
+            f"WARNING: ACIS fluence date {fluence_date.date} is after now "
+            f"{now.date}; clamping to now"
+        )
+        fluence_date = now
     fluence_date = max(fluence_date, now)
-    avg_flux = get_avg_flux(ace_rates_file(args.data_dir, test=args.test))
+    ace_avg_path = (
+        Path(args.ace_avg_file)
+        if args.ace_avg_file
+        else ace_rates_file(args.data_dir, test=args.test)
+    )
+    avg_flux = get_avg_flux(ace_avg_path)
 
     # Get the realtime ACE P3 and HRC proxy values over the time range
     goes_x_times, goes_x_vals = get_goes_x(start, now, args.data_dir, args.test)

@@ -75,11 +75,11 @@ def make_flux_line(row):
 
 
 def get_fluence_start(date_now_secs):
-    """Return the time (CXO seconds) of the most recent 55km outbound
+    """Return the time (CXO seconds) of the most recent 55,000 km outbound
     altitude crossing before date_now_secs.
 
-    Fetches Dist_SatEarth via cheta over the preceding 10 days at 5-minute
-    cadence and finds the last upward crossing of 55km.
+    Fetches Dist_SatEarth (metres) via cheta over the preceding 10 days at
+    5-minute cadence and finds the last upward crossing of 55,000 km.
     """
     start = CxoTime(date_now_secs - 10 * 86400)
     stop  = CxoTime(date_now_secs)
@@ -88,15 +88,16 @@ def get_fluence_start(date_now_secs):
     dist  = msid.vals
 
     # Find upward crossings: dist[i-1] < threshold <= dist[i]
-    below = dist < 55000
+    # Dist_SatEarth is in metres; 55,000 km = 55_000e3 m
+    below = dist < 55_000e3
     crossings = np.where(~below[1:] & below[:-1])[0] + 1  # index of first sample above
     crossings = crossings[times[crossings] < date_now_secs]
 
     if len(crossings) == 0:
-        raise ValueError("no 55km outbound crossing found in Dist_SatEarth for the 10 days before " + CxoTime(date_now_secs).date)
+        raise ValueError("no 55,000 km outbound crossing found in Dist_SatEarth for the 10 days before " + CxoTime(date_now_secs).date)
 
     crossing_secs = float(times[crossings[-1]])
-    print(f"  Using Dist_SatEarth 55km crossing: {CxoTime(crossing_secs).date}")
+    print(f"  Using Dist_SatEarth 55,000 km crossing: {CxoTime(crossing_secs).date}")
     return crossing_secs
 
 
