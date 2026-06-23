@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 import tables
+from astropy import units as u
 from cxotime import CxoTime
 
 H5_FILES = ["ACE.h5", "GOES_X.h5", "hrc_shield.h5"]
@@ -157,7 +158,22 @@ def main():
     print(f"\nHistorical 2-hr avg P3 = {p3_avg:.1f} p/cm2/s/ster/MeV")
     _write_ace_avg_file(mock_ace_avg, p3_avg)
 
-    # Run make_timeline.py with the truncated data dir and the historical date
+    # Generate a historical dsn_summary.yaml from kadi for the plot window.
+    mock_dsn_comms = out_dir / "dsn_summary.yaml"
+    make_dsn = importlib.resources.files("replan_central") / "make_historical_dsn_yaml.py"
+    dsn_start = (date - 1 * u.day).date
+    dsn_stop = (date + 3 * u.day).date
+    dsn_cmd = [
+        sys.executable,
+        str(make_dsn),
+        "--start", dsn_start,
+        "--stop", dsn_stop,
+        "--out", str(mock_dsn_comms),
+    ]
+    print(f"\nRunning: {' '.join(dsn_cmd)}")
+    subprocess.run(dsn_cmd, check=True)
+
+    # Run make_timeline.py with the truncated data dir and the historical date.
     make_timeline = importlib.resources.files("replan_central") / "make_timeline.py"
     env = os.environ.copy()
     env.setdefault("SKA", "/proj/sot/ska")
@@ -174,6 +190,8 @@ def main():
         str(mock_current_dat),
         "--ace-avg-file",
         str(mock_ace_avg),
+        "--dsn-comms-file",
+        str(mock_dsn_comms),
     ]
     print(f"\nRunning: {' '.join(cmd)}")
     subprocess.run(cmd, check=True, env=env)

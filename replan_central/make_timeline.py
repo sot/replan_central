@@ -231,6 +231,14 @@ def get_parser():
             "flight/test location). Useful for historical replay."
         ),
     )
+    parser.add_argument(
+        "--dsn-comms-file",
+        type=str,
+        help=(
+            "Override DSN comms file path (default is $SKA/data/dsn_summary/dsn_summary.yaml). "
+            "Useful for historical replay."
+        ),
+    )
     return parser
 
 
@@ -378,11 +386,13 @@ def get_avg_flux(
     return p3_avg_flux
 
 
-def get_radzones():
+def get_radzones(now=None):
     """
     Constuct a list of complete radiation zones using kadi events
     """
-    radzones = events.rad_zones.filter(start=CxoTime() - 5 * u.day, stop=None)
+    if now is None:
+        now = CxoTime()
+    radzones = events.rad_zones.filter(start=now - 5 * u.day, stop=now + 5 * u.day)
     return [(x.start, x.stop) for x in radzones]
 
 
@@ -620,8 +630,13 @@ def main(args_sys=None):
     comms_avail_humans = get_comms_avail_for_humans(comms_avail)
 
     states = kadi_states.get_states(start=start, stop=stop, scenario="flight")
-    radzones = get_radzones()
-    comms = get_comms()
+    radzones = get_radzones(now=now)
+    dsn_comms_path = (
+        Path(args.dsn_comms_file)
+        if args.dsn_comms_file
+        else dsn_comms_file(args.data_dir, test=args.test)
+    )
+    comms = yaml.safe_load(open(dsn_comms_path, "r"))
 
     # Get the ACIS ops fluence estimate and current 2hr avg flux
     acis_fluence_path = (
