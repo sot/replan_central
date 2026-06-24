@@ -231,7 +231,7 @@ def normalize_local_ref(ref: str, current_rel: Path) -> Optional[Path]:
         rel = PurePosixPath(current_rel.as_posix()).parent / raw
 
     norm = posixpath.normpath(str(rel))
-    if norm.startswith("../") or norm == ".." or norm == ".":
+    if norm.startswith("../") or norm in {"..", "."}:
         return None
     return Path(norm)
 
@@ -289,9 +289,7 @@ def crawl_reachable_files(root: Path, entry_file: str) -> Set[Path]:
         elif suffix == ".css":
             refs = extract_local_refs_from_css(content, rel)
 
-        for ref in refs:
-            if (root / ref).exists() and ref not in seen:
-                queue.append(ref)
+        queue.extend(ref for ref in refs if (root / ref).exists() and ref not in seen)
 
     return seen
 
@@ -350,10 +348,9 @@ def render_path_list(paths: List[Path], base: str) -> str:
 
     items = []
     for path in paths[:100]:
-        href = f"{base}/{path.as_posix()}"
-        items.append(
-            f'<li><a href="{html.escape(href)}" target="_blank">{html.escape(path.as_posix())}</a></li>'
-        )
+        href = html.escape(f"{base}/{path.as_posix()}")
+        name = html.escape(path.as_posix())
+        items.append(f'<li><a href="{href}" target="_blank">{name}</a></li>')
     if len(paths) > 100:
         items.append(f"<li>... and {len(paths) - 100} more</li>")
     return "".join(items)
@@ -397,6 +394,7 @@ def make_diff_report(
     ]
     identical_files = len(shared_files) - len(different_files)
 
+    missing_count = len(only_test) + len(only_flight)
     rendered_diff = "No rendered-text diff available for selected entry files."
     test_rendered_lines = html_rendered_text_lines(test_dir / test_entry)
     flight_rendered_lines = html_rendered_text_lines(flight_dir / flight_entry)
@@ -471,7 +469,7 @@ def make_diff_report(
       <div class=\"metric\"><strong>{len(shared_files)}</strong> displayed shared files</div>
       <div class=\"metric\"><strong>{identical_files}</strong> identical files</div>
       <div class=\"metric\"><strong>{len(different_files)}</strong> changed files</div>
-      <div class=\"metric\"><strong>{len(only_test) + len(only_flight)}</strong> displayed missing files</div>
+      <div class=\"metric\"><strong>{missing_count}</strong> displayed missing files</div>
     </div>
   </section>
   <section>
