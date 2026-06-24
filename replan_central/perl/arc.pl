@@ -382,7 +382,7 @@ sub install_web_files {
     $html > io(File::Spec->catfile($outdir, $opt{file}{web_page}));
 
     foreach (qw(title_image blue_paper blue_paper_test
-		timeline_js timeline_css vert_line)) {
+		timeline_js timeline_css vert_line alert_limits)) {
         my $in = io(File::Spec->catfile($pkg_data, $opt{file}{$_}));
         my $out =io(File::Spec->catfile($outdir, $opt{file}{$_}));
         $in > $out;
