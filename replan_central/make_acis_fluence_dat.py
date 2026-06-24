@@ -74,7 +74,6 @@ def make_flux_line(row):
     )
 
 
-
 def get_fluence_start(date_now_secs):
     """Return CXO seconds of the most recent 55,000 km outbound altitude crossing.
 
@@ -83,10 +82,10 @@ def get_fluence_start(date_now_secs):
     date_now_secs.
     """
     start = CxoTime(date_now_secs - 10 * 86400)
-    stop  = CxoTime(date_now_secs)
+    stop = CxoTime(date_now_secs)
     msid = fetch.Msid("Dist_SatEarth", start.date, stop.date, stat="5min")
-    times = msid.times   # mid-point of each 5-min bin, CXO seconds
-    dist  = msid.vals
+    times = msid.times  # mid-point of each 5-min bin, CXO seconds
+    dist = msid.vals
 
     # Find upward crossings: dist[i-1] < threshold <= dist[i]
     # Dist_SatEarth is in metres; 55,000 km = 55_000e3 m
@@ -105,8 +104,6 @@ def get_fluence_start(date_now_secs):
     return crossing_secs
 
 
-
-
 def get_fluence_values(table, idx, scale, fluence_start_secs):
     times = table.col("time")[: idx + 1]
     if len(times) < 2:
@@ -118,7 +115,7 @@ def get_fluence_values(table, idx, scale, fluence_start_secs):
         print("  WARNING: no ACE samples after fluence_start; fluence will be 0")
         return [0.0 for _ in CHANNELS]
 
-    pstat  = table.col("pstat")[: idx + 1][ok]
+    pstat = table.col("pstat")[: idx + 1][ok]
     destat = table.col("destat")[: idx + 1][ok]
     t_window = times[ok]
     fluences = []
@@ -190,7 +187,9 @@ def main():
 
         fluence_start_secs = get_fluence_start(cxo_time.secs)
         flux_line = make_flux_line(row)
-        fluence_values = get_fluence_values(table, idx, args.fluence_scale, fluence_start_secs)
+        fluence_values = get_fluence_values(
+            table, idx, args.fluence_scale, fluence_start_secs
+        )
         fluence_line = make_fluence_line(cxo_time, fluence_values)
 
     text = build_current_dat_text(flux_line, fluence_line)

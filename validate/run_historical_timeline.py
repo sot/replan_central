@@ -160,15 +160,20 @@ def main():
 
     # Generate a historical dsn_summary.yaml from kadi for the plot window.
     mock_dsn_comms = out_dir / "dsn_summary.yaml"
-    make_dsn = importlib.resources.files("replan_central") / "make_historical_dsn_yaml.py"
+    make_dsn = (
+        importlib.resources.files("replan_central") / "make_historical_dsn_yaml.py"
+    )
     dsn_start = (date - 1 * u.day).date
     dsn_stop = (date + 3 * u.day).date
     dsn_cmd = [
         sys.executable,
         str(make_dsn),
-        "--start", dsn_start,
-        "--stop", dsn_stop,
-        "--out", str(mock_dsn_comms),
+        "--start",
+        dsn_start,
+        "--stop",
+        dsn_stop,
+        "--out",
+        str(mock_dsn_comms),
     ]
     print(f"\nRunning: {' '.join(dsn_cmd)}")
     subprocess.run(dsn_cmd, check=True)

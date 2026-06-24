@@ -53,9 +53,7 @@ class LinkExtractor(HTMLParser):
         super().__init__()
         self.links: List[str] = []
 
-    def handle_starttag(
-        self, tag: str, attrs: List[Tuple[str, Optional[str]]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
         for name, value in attrs:
             if value is None:
                 continue
@@ -71,9 +69,7 @@ class RenderedTextExtractor(HTMLParser):
         self._ignore_depth = 0
         self.lines: List[str] = []
 
-    def handle_starttag(
-        self, tag: str, attrs: List[Tuple[str, Optional[str]]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
         if tag in {"script", "style"}:
             self._ignore_depth += 1
 
@@ -250,7 +246,7 @@ def extract_local_refs_from_html(text: str, current_rel: Path) -> List[Path]:
 def extract_local_refs_from_css(text: str, current_rel: Path) -> List[Path]:
     refs: List[Path] = []
     for match in re.findall(r"url\((.*?)\)", text, flags=re.IGNORECASE):
-        ref = match.strip().strip('"\'')
+        ref = match.strip().strip("\"'")
         if not ref:
             continue
         normalized = normalize_local_ref(ref, current_rel)
@@ -312,7 +308,9 @@ def html_rendered_text_lines(path: Path) -> Optional[List[str]]:
                 continue
 
             delta_cols = [
-                name for name in table.colnames if "".join(name.lower().split()) == "deltatime"
+                name
+                for name in table.colnames
+                if "".join(name.lower().split()) == "deltatime"
             ]
             for name in delta_cols:
                 table.remove_column(name)
@@ -390,7 +388,9 @@ def make_diff_report(
     only_flight = sorted(flight_files - test_files)
 
     different_files = [
-        path for path in shared_files if not files_match(test_dir / path, flight_dir / path)
+        path
+        for path in shared_files
+        if not files_match(test_dir / path, flight_dir / path)
     ]
     identical_files = len(shared_files) - len(different_files)
 
@@ -409,7 +409,9 @@ def make_diff_report(
             )
         )
         rendered_diff = (
-            "\n".join(diff_lines) if diff_lines else "No differences in rendered entry text."
+            "\n".join(diff_lines)
+            if diff_lines
+            else "No differences in rendered entry text."
         )
 
     report = f"""<!doctype html>
@@ -474,11 +476,11 @@ def make_diff_report(
   </section>
   <section>
     <h2>Only In Flight</h2>
-    <ul>{render_path_list(only_flight, 'flight')}</ul>
+    <ul>{render_path_list(only_flight, "flight")}</ul>
   </section>
   <section>
     <h2>Only In Test</h2>
-    <ul>{render_path_list(only_test, 'test')}</ul>
+    <ul>{render_path_list(only_test, "test")}</ul>
   </section>
   <section>
     <h2>Changed Displayed Files</h2>
@@ -680,14 +682,18 @@ def main() -> None:
     args = get_parser().parse_args()
 
     if not args.test_src.exists():
-        raise FileNotFoundError(f"Test source directory does not exist: {args.test_src}")
+        raise FileNotFoundError(
+            f"Test source directory does not exist: {args.test_src}"
+        )
     if not args.flight_src.exists():
         raise FileNotFoundError(
             f"Flight source directory does not exist: {args.flight_src}"
         )
 
     captured_at = (
-        parse_utc_iso(args.captured_at) if args.captured_at else datetime.now(timezone.utc)
+        parse_utc_iso(args.captured_at)
+        if args.captured_at
+        else datetime.now(timezone.utc)
     )
     bucket = bucket_time(captured_at, args.bucket_minutes)
     snap_id = snapshot_id_from_time(bucket)
@@ -708,7 +714,9 @@ def main() -> None:
 
     test_entry = choose_entry_file(test_dst, args.entry_file)
     flight_entry = choose_entry_file(flight_dst, args.entry_file)
-    diff_entry = make_diff_report(snap_dir, test_dst, flight_dst, test_entry, flight_entry)
+    diff_entry = make_diff_report(
+        snap_dir, test_dst, flight_dst, test_entry, flight_entry
+    )
 
     manifest_path = out_dir / MANIFEST_FILE
     snapshots = load_manifest(manifest_path)

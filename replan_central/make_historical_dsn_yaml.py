@@ -24,8 +24,19 @@ _EDT = timedelta(hours=-4)
 _EST = timedelta(hours=-5)
 
 _MONTHS_SHORT = [
-    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 ]
 _DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -40,7 +51,9 @@ def _utc_to_eastern(dt_utc: datetime) -> tuple[datetime, str]:
     # First Sunday in November
     dst_end = datetime(year, 11, 1, 2, tzinfo=timezone.utc)
     dst_end += timedelta(days=(6 - dst_end.weekday()) % 7)
-    offset = _EDT if dst_start <= dt_utc.replace(tzinfo=timezone.utc) < dst_end else _EST
+    offset = (
+        _EDT if dst_start <= dt_utc.replace(tzinfo=timezone.utc) < dst_end else _EST
+    )
     label = "EDT" if offset == _EDT else "EST"
     local = dt_utc + offset
     return local, label
@@ -88,21 +101,21 @@ def comm_to_dict(c) -> dict:
     sched = f"{doy:03d}/{bot_dt.strftime('%H%M')}-{eot_dt.strftime('%H%M')}"
 
     return {
-        "activity":           _field("Activity",           c.activity),
-        "bot":                _field("BOT",                bot_dt.strftime("%H%M")),
-        "bot_date":           _field("BOT date",           bot_date),
-        "bot_time":           _field("BOT time",           int(c.tstart)),
-        "bot_year_day":       _field("BOT year",           _year_day_frac(bot_date)),
-        "eot":                _field("EOT",                eot_dt.strftime("%H%M")),
-        "eot_date":           _field("EOT date",           eot_date),
-        "eot_time":           _field("EOT time",           int(c.tstop)),
-        "eot_year_day":       _field("EOT year",           _year_day_frac(eot_date)),
-        "lga":                _field("LGA",                ""),
-        "sched_support_time": _field("Support (GMT)",      sched),
-        "site":               _field("Site",               c.site),
-        "soe":                _field("SOE",                c.soe),
-        "station":            _field("Station",            c.station),
-        "track_local":        _field("Track time (local)", _track_local(bot_date, eot_date)),
+        "activity": _field("Activity", c.activity),
+        "bot": _field("BOT", bot_dt.strftime("%H%M")),
+        "bot_date": _field("BOT date", bot_date),
+        "bot_time": _field("BOT time", int(c.tstart)),
+        "bot_year_day": _field("BOT year", _year_day_frac(bot_date)),
+        "eot": _field("EOT", eot_dt.strftime("%H%M")),
+        "eot_date": _field("EOT date", eot_date),
+        "eot_time": _field("EOT time", int(c.tstop)),
+        "eot_year_day": _field("EOT year", _year_day_frac(eot_date)),
+        "lga": _field("LGA", ""),
+        "sched_support_time": _field("Support (GMT)", sched),
+        "site": _field("Site", c.site),
+        "soe": _field("SOE", c.soe),
+        "station": _field("Station", c.station),
+        "track_local": _field("Track time (local)", _track_local(bot_date, eot_date)),
     }
 
 
@@ -111,17 +124,16 @@ def main():
         description="Generate dsn_summary.yaml for a historical date range from kadi"
     )
     parser.add_argument(
-        "--start", required=True,
-        help="Start date in CxoTime format, e.g. 2026:093:00:00:00"
+        "--start",
+        required=True,
+        help="Start date in CxoTime format, e.g. 2026:093:00:00:00",
     )
     parser.add_argument(
-        "--stop", required=True,
-        help="Stop date in CxoTime format, e.g. 2026:096:00:00:00"
+        "--stop",
+        required=True,
+        help="Stop date in CxoTime format, e.g. 2026:096:00:00:00",
     )
-    parser.add_argument(
-        "--out", required=True,
-        help="Output path for dsn_summary.yaml"
-    )
+    parser.add_argument("--out", required=True, help="Output path for dsn_summary.yaml")
     args = parser.parse_args()
 
     comms = list(events.dsn_comms.filter(args.start, args.stop))
