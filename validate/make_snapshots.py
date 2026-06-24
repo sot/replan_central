@@ -467,6 +467,10 @@ def make_diff_report(
 <body>
   <h1>Diff Summary</h1>
   <section>
+    <h2>Rendered Entry Text Diff</h2>
+    <pre>{html.escape(rendered_diff)}</pre>
+  </section>
+  <section>
     <div class=\"summary\">
       <div class=\"metric\"><strong>{len(shared_files)}</strong> displayed shared files</div>
       <div class=\"metric\"><strong>{identical_files}</strong> identical files</div>
@@ -485,10 +489,6 @@ def make_diff_report(
   <section>
     <h2>Changed Displayed Files</h2>
     <ul>{render_changed_paths(different_files)}</ul>
-  </section>
-  <section>
-    <h2>Rendered Entry Text Diff</h2>
-    <pre>{html.escape(rendered_diff)}</pre>
   </section>
 </body>
 </html>
@@ -522,21 +522,23 @@ def render_index_html(
       --accent: #0a5cab;
     }}
     * {{ box-sizing: border-box; }}
-    body {{
+    html, body {{
       margin: 0;
-      background: linear-gradient(180deg, #ecf2f8 0%, var(--bg) 55%);
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
       color: var(--ink);
       font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     }}
+    body {{ display: flex; flex-direction: column; }}
     header {{
-      padding: 16px 20px;
+      flex: 0 0 auto;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--line);
       background: var(--panel);
-      position: sticky;
-      top: 0;
       z-index: 5;
     }}
-    h1 {{ margin: 0 0 10px 0; font-size: 1.2rem; }}
+    h1 {{ margin: 0 0 8px 0; font-size: 1.15rem; }}
     .controls {{
       display: flex;
       flex-wrap: wrap;
@@ -549,44 +551,59 @@ def render_index_html(
       background: #fff;
       color: var(--ink);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 5px 9px;
     }}
     button:hover {{ border-color: var(--accent); }}
     .status {{ color: var(--muted); margin-left: 8px; }}
-    .frames {{
-      display: grid;
-      grid-template-columns: 1fr 1fr 0.9fr;
-      gap: 10px;
-      padding: 10px;
-      height: calc(100vh - 110px);
+    .main {{
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 8px;
+      gap: 8px;
+    }}
+    .diff-row {{
+      flex: 3 1 0;
+      min-height: 0;
+    }}
+    .side-row {{
+      flex: 2 1 0;
+      min-height: 0;
+      display: flex;
+      gap: 8px;
     }}
     .pane {{
       display: flex;
       flex-direction: column;
+      flex: 1 1 0;
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 10px;
       overflow: hidden;
       background: var(--panel);
     }}
-    .pane h2 {{
+    .pane-label {{
+      flex: 0 0 auto;
       margin: 0;
-      padding: 10px 12px;
-      font-size: 0.95rem;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
       border-bottom: 1px solid var(--line);
       background: #f8fbff;
     }}
     iframe {{
       border: 0;
       width: 100%;
-      flex: 1;
-      background: #fff;
+      flex: 1 1 0;
+      min-height: 0;
+      display: block;
     }}
-    @media (max-width: 1200px) {{
-      .frames {{
-        grid-template-columns: 1fr;
-        height: auto;
-      }}
-      .pane {{ height: 72vh; }}
+    @media (max-width: 900px) {{
+      html, body {{ overflow: auto; height: auto; }}
+      .diff-row {{ flex: none; height: 60vh; }}
+      .side-row {{ flex-direction: column; flex: none; }}
+      .pane {{ height: 50vh; flex: none; }}
     }}
   </style>
 </head>
@@ -601,20 +618,22 @@ def render_index_html(
     </div>
   </header>
 
-  <section class=\"frames\">
-    <div class=\"pane\">
-      <h2>{flight_label}</h2>
-      <iframe id=\"flightFrame\" title=\"{flight_label} snapshot\"></iframe>
+  <div class=\"main\">
+    <div class=\"diff-row pane\">
+      <h2 class=\"pane-label\">{diff_label}</h2>
+      <iframe id=\"diffFrame\" title=\"{diff_label}\"></iframe>
     </div>
-    <div class=\"pane\">
-      <h2>{test_label}</h2>
-      <iframe id=\"testFrame\" title=\"{test_label} snapshot\"></iframe>
+    <div class=\"side-row\">
+      <div class=\"pane\">
+        <h2 class=\"pane-label\">{flight_label}</h2>
+        <iframe id=\"flightFrame\" title=\"{flight_label}\"></iframe>
+      </div>
+      <div class=\"pane\">
+        <h2 class=\"pane-label\">{test_label}</h2>
+        <iframe id=\"testFrame\" title=\"{test_label}\"></iframe>
+      </div>
     </div>
-    <div class=\"pane\">
-      <h2>{diff_label}</h2>
-      <iframe id=\"diffFrame\" title=\"{diff_label} snapshot\"></iframe>
-    </div>
-  </section>
+  </div>
 
   <script>
     const snapshots = {snapshots_json};
@@ -626,8 +645,34 @@ def render_index_html(
     const prevBtn = document.getElementById('prev');
     const nextBtn = document.getElementById('next');
 
-    function labelFor(snapshot) {{
-      return `${{snapshot.id}} (${{snapshot.captured_at}})`;
+    let syncing = false;
+
+    function syncScroll(srcDoc, dstDoc) {{
+      if (syncing) return;
+      syncing = true;
+      const src = srcDoc.documentElement;
+      const dst = dstDoc.documentElement;
+      const max = src.scrollHeight - src.clientHeight;
+      const ratio = max > 0 ? src.scrollTop / max : 0;
+      dst.scrollTop = ratio * Math.max(0, dst.scrollHeight - dst.clientHeight);
+      setTimeout(() => {{ syncing = false; }}, 30);
+    }}
+
+    function attachScrollSync() {{
+      try {{
+        const fDoc = flightFrame.contentDocument;
+        const tDoc = testFrame.contentDocument;
+        if (!fDoc || !tDoc) return;
+        fDoc.addEventListener('scroll', () => syncScroll(fDoc, tDoc), true);
+        tDoc.addEventListener('scroll', () => syncScroll(tDoc, fDoc), true);
+      }} catch (_) {{}}
+    }}
+
+    flightFrame.addEventListener('load', attachScrollSync);
+    testFrame.addEventListener('load', attachScrollSync);
+
+    function labelFor(snap) {{
+      return `${{snap.id}} (${{snap.captured_at}})`;
     }}
 
     function updateControls() {{
@@ -637,9 +682,7 @@ def render_index_html(
     }}
 
     function setSnapshot(i) {{
-      if (i < 0 || i >= snapshots.length) {{
-        return;
-      }}
+      if (i < 0 || i >= snapshots.length) return;
       select.selectedIndex = i;
       const snap = snapshots[i];
       flightFrame.src = snap.flight_url;
@@ -651,20 +694,18 @@ def render_index_html(
 
     function init() {{
       if (snapshots.length === 0) {{
-        status.textContent = 'No snapshots yet. Run show_snapshots.py to capture one.';
+        status.textContent = 'No snapshots yet. Run make_snapshots.py to capture one.';
         select.disabled = true;
         prevBtn.disabled = true;
         nextBtn.disabled = true;
         return;
       }}
-
       for (const snap of snapshots) {{
         const opt = document.createElement('option');
         opt.value = snap.id;
         opt.textContent = labelFor(snap);
         select.appendChild(opt);
       }}
-
       select.addEventListener('change', () => setSnapshot(select.selectedIndex));
       prevBtn.addEventListener('click', () => setSnapshot(select.selectedIndex - 1));
       nextBtn.addEventListener('click', () => setSnapshot(select.selectedIndex + 1));
